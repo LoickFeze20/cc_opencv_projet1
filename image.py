@@ -12,7 +12,7 @@ import json
 # CONFIGURATION PAGE PROFESSIONNELLE
 # -----------------------------
 st.set_page_config(
-    page_title="AI Vision Pro | Master IABD",
+    page_title="Master Pro | Projet1 IABD",
     page_icon="✨",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -350,8 +350,8 @@ st.markdown("""
 # -----------------------------
 st.markdown("""
 <div class="main-header">
-    <h1>AI VISION PRO</h1>
-    <p>Studio Professionnel de Traitement d'Images • Master 2 Intelligence Artificielle & Big Data</p>
+    <h1>MASTER PRO</h1>
+    <p>Studio Professionnel de Traitement d'Images • Projet 1 Intelligence Artificielle & Big Data</p>
     <div class="badge-container">
         <span class="badge">🎨 Photo Éditeur</span>
         <span class="badge">⚡ Traitement IA</span>
@@ -1201,8 +1201,8 @@ else:
 # -----------------------------
 st.markdown("""
 <div class="footer">
-    <h3>🎓 MASTER 2 INTELLIGENCE ARTIFICIELLE & BIG DATA</h3>
-    <p>Projet OpenCV & Streamlit - Studio de Traitement d'Images Intelligent</p>
+    <h3>🎓 PROJET 1 INTELLIGENCE ARTIFICIELLE & BIG DATA</h3>
+    <p>Projet1 OpenCV & Streamlit - Studio de Traitement d'Images Intelligent</p>
     <div style="margin: 1.5rem 0; display: flex; justify-content: center; gap: 15px; flex-wrap: wrap;">
         <span style="padding: 8px 16px; background: var(--card-bg); 
             border-radius: 10px; font-size: 0.9rem; color: var(--text-secondary);">
@@ -1222,7 +1222,8 @@ st.markdown("""
         </span>
     </div>
     <p style="color: var(--text-secondary); font-size: 0.8rem; margin-top: 1rem;">
-    © 2024 AI Vision Pro • Dernière mise à jour: """ + datetime.now().strftime("%d/%m/%Y %H:%M") + """
+    © 2025 Projet1 Pro • Dernière mise à jour: """ + datetime.now().strftime("%d/%m/%Y %H:%M") + """
     </p>
 </div>
 """, unsafe_allow_html=True)
+
