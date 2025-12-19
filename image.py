@@ -1186,7 +1186,7 @@ else:
 st.markdown("""
 <div class="footer">
     <h3>🎓 PROJET 1 INTELLIGENCE ARTIFICIELLE & BIG DATA</h3>
-    <h4>Developpé par Effemba, Eyoum et Feze</h4>
+    <h4>EFEMBA Manuella - EYOUM Brayan - FEZE Loïck</h4>
     <p>Projet1 OpenCV & Streamlit - Studio de Traitement d'Images Intelligent</p>
     <div style="margin: 1.5rem 0; display: flex; justify-content: center; gap: 15px; flex-wrap: wrap;">
         <span style="padding: 8px 16px; background: var(--card-bg); 
@@ -1211,6 +1211,7 @@ st.markdown("""
     </p>
 </div>
 """, unsafe_allow_html=True)
+
 
 
 
