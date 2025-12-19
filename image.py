@@ -355,9 +355,7 @@ st.markdown("""
     <div class="badge-container">
         <span class="badge">🎨 Photo Éditeur</span>
         <span class="badge">⚡ Traitement IA</span>
-        <span class="badge">💎 Design Premium</span>
         <span class="badge">📱 Responsive</span>
-        <span class="badge">🌓 Auto-Thème</span>
     </div>
 </div>
 """, unsafe_allow_html=True)
@@ -1226,4 +1224,5 @@ st.markdown("""
     </p>
 </div>
 """, unsafe_allow_html=True)
+
 
