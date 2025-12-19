@@ -1,1218 +1,1149 @@
 import streamlit as st
 import cv2
 import numpy as np
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image
 import io
 import time
+import pandas as pd
+import plotly.graph_objects as go
+import plotly.express as px
 from datetime import datetime
-from io import BytesIO
-import json
+import base64
 
 # -----------------------------
-# CONFIGURATION PAGE PROFESSIONNELLE
+# CONFIGURATION PAGE
 # -----------------------------
 st.set_page_config(
-    page_title="Master Pro | Projet1 IABD",
-    page_icon="✨",
+    page_title="MASTER PRO - AI Image Studio",
+    page_icon="🚀",
     layout="wide",
-    initial_sidebar_state="expanded"
+    initial_sidebar_state="collapsed"
 )
 
 # -----------------------------
-# CSS POUR ADAPTATION AUTOMATIQUE AU THÈME SYSTÈME
+# CSS PERSONNALISÉ AVANCÉ
 # -----------------------------
 st.markdown("""
 <style>
-    /* DÉTECTION AUTOMATIQUE DU THÈME SYSTÈME */
-    @media (prefers-color-scheme: dark) {
-        /* MODE SOMBRE SYSTÈME */
-        :root {
-            --primary: #8B5CF6;
-            --secondary: #10B981;
-            --accent: #F59E0B;
-            --bg-primary: #0F172A;
-            --bg-secondary: #1E293B;
-            --bg-surface: #334155;
-            --text-primary: #F1F5F9;
-            --text-secondary: #94A3B8;
-            --border-color: #475569;
-            --button-bg: #8B5CF6;
-            --button-text: #FFFFFF;
-            --sidebar-bg: #1E293B;
-            --card-bg: #334155;
-            --metric-bg: linear-gradient(135deg, #8B5CF6, #10B981);
+    /* Style global */
+    .stApp {
+        background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+        color: #f0f0f0;
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    }
+    
+    /* Titre principal avec animation */
+    .main-title {
+        text-align: center;
+        font-size: 4.5rem;
+        background: linear-gradient(90deg, #00dbde, #fc00ff, #00dbde);
+        background-size: 200% auto;
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
+        padding: 25px 0;
+        margin-bottom: 10px;
+        font-weight: 900;
+        letter-spacing: 3px;
+        text-transform: uppercase;
+        animation: shine 3s linear infinite;
+        text-shadow: 0 0 30px rgba(0, 219, 222, 0.3);
+    }
+    
+    @keyframes shine {
+        to {
+            background-position: 200% center;
         }
     }
     
-    @media (prefers-color-scheme: light) {
-        /* MODE CLAIR SYSTÈME */
-        :root {
-            --primary: #0066FF;
-            --secondary: #00C896;
-            --accent: #FF6B35;
-            --bg-primary: #FFFFFF;
-            --bg-secondary: #F8FAFC;
-            --bg-surface: #FFFFFF;
-            --text-primary: #1E293B;
-            --text-secondary: #64748B;
-            --border-color: #E2E8F0;
-            --button-bg: #0066FF;
-            --button-text: #FFFFFF;
-            --sidebar-bg: #F8FAFC;
-            --card-bg: #FFFFFF;
-            --metric-bg: linear-gradient(135deg, #0066FF, #00C896);
-        }
+    /* Sous-titre animé */
+    .subtitle {
+        text-align: center;
+        color: #a0a0ff;
+        font-size: 1.4rem;
+        margin-bottom: 40px;
+        font-weight: 300;
+        letter-spacing: 1px;
+        animation: fadeIn 2s ease-in;
     }
-
-    /* OVERRIDE COMPLET DU CSS STREAMLIT */
-    .stApp {
-        background-color: var(--bg-primary) !important;
-        color: var(--text-primary) !important;
-        font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(-20px); }
+        to { opacity: 1; transform: translateY(0); }
     }
-
-    /* FORCER LES COULEURS DE TEXTE POUR TOUT */
-    h1, h2, h3, h4, h5, h6, p, span, div, label, .stMarkdown, .stText {
-        color: var(--text-primary) !important;
+    
+    /* Conteneurs avec effet verre morphique */
+    .glass-container {
+        background: rgba(25, 25, 40, 0.7);
+        backdrop-filter: blur(15px);
+        border-radius: 20px;
+        padding: 30px;
+        margin: 25px 0;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
     }
-
-    /* BOUTONS - VISIBLES IMMÉDIATEMENT */
+    
+    .glass-container:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 15px 40px rgba(0, 0, 0, 0.4);
+        border: 1px solid rgba(0, 219, 222, 0.3);
+    }
+    
+    /* Boutons néon */
     .stButton > button {
-        background: var(--button-bg) !important;
-        color: var(--button-text) !important;
-        border: none !important;
-        padding: 1rem 2rem !important;
-        border-radius: 12px !important;
-        font-weight: 600 !important;
-        font-size: 1rem !important;
-        transition: all 0.3s !important;
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1) !important;
-    }
-
-    .stButton > button:hover {
-        transform: translateY(-3px) !important;
-        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1) !important;
-        opacity: 0.9 !important;
-    }
-
-    /* SIDEBAR */
-    [data-testid="stSidebar"] {
-        background-color: var(--sidebar-bg) !important;
-        border-right: 1px solid var(--border-color) !important;
-    }
-
-    /* WIDGETS DE LA SIDEBAR */
-    .stSelectbox > div > div {
-        background-color: var(--bg-surface) !important;
-        color: var(--text-primary) !important;
-        border: 1px solid var(--border-color) !important;
-        border-radius: 12px !important;
-    }
-
-    .stTextInput > div > div > input {
-        background-color: var(--bg-surface) !important;
-        color: var(--text-primary) !important;
-        border: 1px solid var(--border-color) !important;
-        border-radius: 12px !important;
-    }
-
-    .stSlider {
-        color: var(--text-primary) !important;
-    }
-
-    .stCheckbox > label {
-        color: var(--text-primary) !important;
-    }
-
-    .stRadio > label {
-        color: var(--text-primary) !important;
-    }
-
-    /* HEADER PROFESSIONNEL */
-    .main-header {
-        background: linear-gradient(135deg, var(--primary), var(--secondary)) !important;
-        padding: 4rem 2rem !important;
-        border-radius: 24px !important;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         color: white !important;
-        text-align: center !important;
-        margin: 2rem auto !important;
-        max-width: 1400px !important;
-        box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1) !important;
+        border: none !important;
+        border-radius: 12px !important;
+        padding: 15px 30px !important;
+        font-weight: 700 !important;
+        font-size: 1.1rem !important;
+        transition: all 0.3s !important;
+        text-transform: uppercase !important;
+        letter-spacing: 1px !important;
         position: relative !important;
         overflow: hidden !important;
-        border: 1px solid rgba(255, 255, 255, 0.1) !important;
+        box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4) !important;
     }
-
-    .main-header h1 {
-        font-size: 4rem !important;
-        font-weight: 800 !important;
-        margin-bottom: 1rem !important;
-        background: linear-gradient(135deg, #FFFFFF, #E2E8F0) !important;
-        -webkit-background-clip: text !important;
-        -webkit-text-fill-color: transparent !important;
-        background-clip: text !important;
+    
+    .stButton > button:hover {
+        transform: translateY(-3px) !important;
+        box-shadow: 0 8px 25px rgba(102, 126, 234, 0.6) !important;
+        background: linear-gradient(135deg, #764ba2 0%, #667eea 100%) !important;
     }
-
-    .main-header p {
-        font-size: 1.3rem !important;
-        opacity: 0.9 !important;
-        max-width: 800px !important;
-        margin: 0 auto !important;
-        color: white !important;
+    
+    /* Bouton générer image test - STYLE SPÉCIAL */
+    .test-image-btn {
+        background: linear-gradient(135deg, #00dbde 0%, #fc00ff 100%) !important;
+        animation: pulse 2s infinite !important;
     }
-
-    .badge-container {
-        display: flex !important;
-        justify-content: center !important;
-        gap: 12px !important;
-        margin-top: 2rem !important;
-        flex-wrap: wrap !important;
+    
+    @keyframes pulse {
+        0% { box-shadow: 0 0 0 0 rgba(0, 219, 222, 0.7); }
+        70% { box-shadow: 0 0 0 15px rgba(0, 219, 222, 0); }
+        100% { box-shadow: 0 0 0 0 rgba(0, 219, 222, 0); }
     }
-
-    .badge {
-        background: rgba(255, 255, 255, 0.15) !important;
-        padding: 10px 24px !important;
-        border-radius: 50px !important;
-        font-size: 0.95rem !important;
-        font-weight: 600 !important;
-        border: 1px solid rgba(255, 255, 255, 0.2) !important;
-        color: white !important;
+    
+    /* Zone d'upload stylisée */
+    .upload-zone {
+        border: 3px dashed rgba(0, 219, 222, 0.4);
+        border-radius: 15px;
+        padding: 60px 40px;
+        text-align: center;
+        cursor: pointer;
+        transition: all 0.3s;
+        background: rgba(0, 0, 0, 0.2);
+        position: relative;
+        overflow: hidden;
     }
-
-    /* MÉTRIQUES */
-    .metric-card {
-        background: var(--metric-bg) !important;
-        color: white !important;
-        padding: 1.5rem !important;
-        border-radius: 16px !important;
-        text-align: center !important;
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1) !important;
-        margin: 0.5rem !important;
+    
+    .upload-zone:hover {
+        border-color: #00dbde;
+        background: rgba(0, 219, 222, 0.05);
+        transform: scale(1.02);
     }
-
-    .metric-card h2, .metric-card div {
-        color: white !important;
+    
+    /* Sections */
+    .section-title {
+        color: #00dbde;
+        font-size: 2rem;
+        margin-bottom: 25px;
+        display: flex;
+        align-items: center;
+        gap: 15px;
+        padding-bottom: 15px;
+        border-bottom: 2px solid rgba(0, 219, 222, 0.3);
     }
-
-    /* CARTES D'IMAGES */
-    .image-card {
-        background: var(--card-bg) !important;
-        border: 1px solid var(--border-color) !important;
-        border-radius: 16px !important;
-        padding: 1.5rem !important;
-        margin: 1rem 0 !important;
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1) !important;
-    }
-
-    /* CARTES DE DÉTAILS */
-    .details-card {
-        background: var(--card-bg) !important;
-        border: 1px solid var(--border-color) !important;
-        border-radius: 16px !important;
-        padding: 1.5rem !important;
-        margin-bottom: 1rem !important;
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1) !important;
-    }
-
-    /* CARTES DE FONCTIONNALITÉS */
-    .feature-card {
-        background: var(--card-bg) !important;
-        border: 1px solid var(--border-color) !important;
-        border-radius: 20px !important;
-        padding: 2rem !important;
-        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1) !important;
-        height: 100% !important;
-    }
-
-    /* FOOTER */
-    .footer {
-        background: var(--bg-secondary) !important;
-        border-top: 1px solid var(--border-color) !important;
-        padding: 3rem 2rem !important;
-        margin-top: 4rem !important;
-        text-align: center !important;
-        border-radius: 24px !important;
-    }
-
-    .footer h3 {
-        color: var(--text-primary) !important;
-        font-size: 1.5rem !important;
-        margin-bottom: 1rem !important;
-    }
-
-    .footer p {
-        color: var(--text-secondary) !important;
-        margin: 0.5rem 0 !important;
-    }
-
-    /* ONGLETS */
+    
+    /* Tabs stylisées */
     .stTabs [data-baseweb="tab-list"] {
-        background: var(--bg-surface) !important;
-        padding: 8px !important;
-        border-radius: 12px !important;
-        border: 1px solid var(--border-color) !important;
+        gap: 10px;
+        background: rgba(25, 25, 40, 0.8);
+        padding: 15px;
+        border-radius: 15px;
+        border: 1px solid rgba(255, 255, 255, 0.1);
     }
-
+    
     .stTabs [data-baseweb="tab"] {
-        color: var(--text-primary) !important;
-        border-radius: 8px !important;
-        padding: 12px 24px !important;
-        font-weight: 600 !important;
-    }
-
-    .stTabs [aria-selected="true"] {
-        background: linear-gradient(135deg, var(--primary), var(--secondary)) !important;
-        color: white !important;
-    }
-
-    /* ÉLÉMENTS DE FILTRE */
-    .filter-item {
-        background: var(--card-bg) !important;
-        border-left: 4px solid var(--primary) !important;
-        color: var(--text-primary) !important;
-        padding: 12px 16px !important;
-        margin: 8px 0 !important;
-        border-radius: 12px !important;
-    }
-
-    /* TAGS */
-    .filter-tag {
-        background: linear-gradient(135deg, var(--primary), var(--secondary)) !important;
-        color: white !important;
-        padding: 6px 12px !important;
-        border-radius: 20px !important;
-        display: inline-block !important;
-        margin: 4px !important;
-    }
-
-    /* FILE UPLOADER */
-    .stFileUploader {
-        border: 2px dashed var(--border-color) !important;
-        border-radius: 12px !important;
-        background: var(--bg-surface) !important;
-    }
-
-    /* MESSAGES */
-    .stAlert, .stSuccess, .stWarning, .stError, .stInfo {
-        background: var(--card-bg) !important;
-        color: var(--text-primary) !important;
-        border: 1px solid var(--border-color) !important;
-    }
-
-    /* SCROLLBAR */
-    ::-webkit-scrollbar {
-        width: 10px;
-    }
-
-    ::-webkit-scrollbar-track {
-        background: var(--bg-secondary);
-    }
-
-    ::-webkit-scrollbar-thumb {
-        background: var(--primary);
+        background: rgba(255, 255, 255, 0.05);
         border-radius: 10px;
+        color: #a0a0a0;
+        font-weight: 600;
+        padding: 12px 24px;
+        transition: all 0.3s;
     }
-
-    ::-webkit-scrollbar-thumb:hover {
-        background: var(--secondary);
+    
+    .stTabs [aria-selected="true"] {
+        background: linear-gradient(135deg, #00dbde, #fc00ff) !important;
+        color: white !important;
+        box-shadow: 0 5px 15px rgba(0, 219, 222, 0.3);
     }
-
-    /* INDICATEUR DE THÈME */
-    .theme-indicator {
-        position: fixed !important;
-        top: 20px !important;
-        right: 20px !important;
-        background: var(--card-bg) !important;
-        border: 1px solid var(--border-color) !important;
-        padding: 8px 16px !important;
-        border-radius: 50px !important;
-        font-size: 0.85rem !important;
-        font-weight: 600 !important;
-        color: var(--text-primary) !important;
-        z-index: 1000 !important;
-        display: flex !important;
-        align-items: center !important;
-        gap: 8px !important;
+    
+    /* Images avec effet */
+    .image-frame {
+        background: rgba(0, 0, 0, 0.3);
+        border-radius: 15px;
+        padding: 15px;
+        border: 2px solid rgba(0, 219, 222, 0.2);
+        position: relative;
+        overflow: hidden;
     }
+    
+    .image-frame::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 3px;
+        background: linear-gradient(90deg, #00dbde, #fc00ff);
+    }
+    
+    /* Badge image test */
+    .test-badge {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        background: linear-gradient(135deg, #00dbde, #fc00ff);
+        color: white;
+        padding: 5px 15px;
+        border-radius: 20px;
+        font-size: 0.8rem;
+        font-weight: bold;
+        z-index: 100;
+        animation: badgeGlow 1.5s infinite alternate;
+    }
+    
+    @keyframes badgeGlow {
+        from { box-shadow: 0 0 5px rgba(0, 219, 222, 0.5); }
+        to { box-shadow: 0 0 15px rgba(0, 219, 222, 0.8); }
+    }
+    
+    /* Cache les éléments Streamlit par défaut */
+    #MainMenu {visibility: hidden;}
+    footer {visibility: hidden;}
+    header {visibility: hidden;}
+    .stDeployButton {display: none;}
 </style>
 """, unsafe_allow_html=True)
 
-# Indicateur de thème système
-st.markdown("""
-<div class="theme-indicator">
-    <span>Thème système activé</span>
-    <div style="width: 8px; height: 8px; background: var(--primary); border-radius: 50%;"></div>
-</div>
-""", unsafe_allow_html=True)
+# -----------------------------
+# FONCTIONS DE GÉNÉRATION D'IMAGE DE TEST
+# -----------------------------
+def generate_advanced_test_image():
+    """Génère une image de test professionnelle avec effets visuels"""
+    size = 512
+    # Créer un canevas noir
+    image = np.zeros((size, size, 3), dtype=np.uint8)
+    
+    # Ajouter un dégradé radial
+    center = (size // 2, size // 2)
+    for i in range(size):
+        for j in range(size):
+            distance = np.sqrt((i - center[0])**2 + (j - center[1])**2)
+            max_distance = np.sqrt(center[0]**2 + center[1]**2)
+            
+            # Couleurs basées sur la position
+            r = int((i / size) * 255)
+            g = int((j / size) * 255)
+            b = int((distance / max_distance) * 255)
+            
+            image[i, j] = [b, g, r]
+    
+    # Ajouter des formes géométriques complexes
+    # Cercle principal avec effet 3D
+    cv2.circle(image, center, 200, (255, 255, 255), 8)
+    cv2.circle(image, center, 180, (0, 100, 255), -1)
+    
+    # Hexagone
+    hexagon_points = []
+    for i in range(6):
+        angle = 2 * np.pi / 6 * i
+        x = int(center[0] + 150 * np.cos(angle))
+        y = int(center[1] + 150 * np.sin(angle))
+        hexagon_points.append((x, y))
+    
+    pts = np.array(hexagon_points, np.int32)
+    pts = pts.reshape((-1, 1, 2))
+    cv2.polylines(image, [pts], True, (255, 255, 0), 4)
+    
+    # Lignes rayonnantes
+    for i in range(12):
+        angle = 2 * np.pi / 12 * i
+        x = int(center[0] + 220 * np.cos(angle))
+        y = int(center[1] + 220 * np.sin(angle))
+        cv2.line(image, center, (x, y), (0, 255, 255), 3)
+    
+    # Ajouter du texte avec effet
+    font = cv2.FONT_HERSHEY_COMPLEX
+    cv2.putText(image, 'MASTER', (120, 220), font, 2, (255, 255, 255), 5)
+    cv2.putText(image, 'PRO', (180, 300), font, 2.5, (255, 255, 255), 5)
+    
+    cv2.putText(image, 'AI IMAGE STUDIO', (80, 380), cv2.FONT_HERSHEY_SIMPLEX, 1, (200, 200, 255), 3)
+    
+    # Ajouter des particules
+    for _ in range(50):
+        x = np.random.randint(0, size)
+        y = np.random.randint(0, size)
+        radius = np.random.randint(2, 6)
+        color = (np.random.randint(200, 255), np.random.randint(200, 255), np.random.randint(200, 255))
+        cv2.circle(image, (x, y), radius, color, -1)
+    
+    # Effet de vignette
+    kernel_x = cv2.getGaussianKernel(size, size/3)
+    kernel_y = cv2.getGaussianKernel(size, size/3)
+    kernel = kernel_x * kernel_y.T
+    mask = kernel / kernel.max()
+    
+    for i in range(3):
+        image[:, :, i] = image[:, :, i] * mask
+    
+    return Image.fromarray(image)
 
-# -----------------------------
-# HEADER PROFESSIONNEL
-# -----------------------------
-st.markdown("""
-<div class="main-header">
-    <h1>MASTER PRO</h1>
-    <p>Studio Professionnel de Traitement d'Images • Projet 1 Intelligence Artificielle & Big Data</p>
-    <div class="badge-container">
-        <span class="badge">🎨 Photo Éditeur</span>
-        <span class="badge">⚡ Traitement IA</span>
-        <span class="badge">📱 Responsive</span>
-    </div>
-</div>
-""", unsafe_allow_html=True)
-
-# -----------------------------
-# INITIALISATION SESSION
-# -----------------------------
-if 'processed_images' not in st.session_state:
-    st.session_state.processed_images = []
-if 'current_image' not in st.session_state:
-    st.session_state.current_image = None
-if 'original_image' not in st.session_state:
-    st.session_state.original_image = None
-if 'applied_filters' not in st.session_state:
-    st.session_state.applied_filters = []
-if 'processing_details' not in st.session_state:
-    st.session_state.processing_details = {}
-
-# -----------------------------
-# SIDEBAR PROFESSIONNELLE
-# -----------------------------
-with st.sidebar:
-    st.markdown("""
-    <div style='text-align: center; margin-bottom: 2rem;'>
-        <h3 style='color: var(--primary);'>📤 IMPORTATION</h3>
-    </div>
-    """, unsafe_allow_html=True)
+def generate_test_image_pattern(pattern_type="gradient"):
+    """Génère différents types d'images de test"""
+    size = 512
     
-    uploaded_file = st.file_uploader(
-        "Glissez-déposez votre image",
-        type=["jpg", "jpeg", "png", "bmp"],
-        help="Formats supportés: JPG, PNG, BMP",
-        label_visibility="collapsed"
-    )
+    if pattern_type == "gradient":
+        # Dégradé complexe
+        img = np.zeros((size, size, 3), dtype=np.uint8)
+        for i in range(size):
+            for j in range(size):
+                img[i, j] = [
+                    int((np.sin(i/50) * 0.5 + 0.5) * 255),
+                    int((np.cos(j/50) * 0.5 + 0.5) * 255),
+                    int(((i+j)/(size*2)) * 255)
+                ]
     
-    # Boutons d'exemple designés
-    col_ex1, col_ex2 = st.columns(2)
-    with col_ex1:
-        example_landscape = st.button("🏔️ Paysage", use_container_width=True, 
-                                      help="Charger un exemple de paysage")
-    with col_ex2:
-        example_portrait = st.button("👤 Portrait", use_container_width=True,
-                                    help="Charger un exemple de portrait")
-    
-    st.markdown("---")
-    
-    # Contrôles avec design premium
-    st.markdown("### 🎛️ CONTROLES")
-    
-    tab_basic, tab_advanced = st.tabs(["⚡ Basique", "🎨 Avancé"])
-    
-    with tab_basic:
-        st.markdown("#### Transformation")
-        rotation = st.selectbox("Rotation", ["Aucune", "90° Droite", "90° Gauche", "180°"])
-        flip_h = st.checkbox("Miroir horizontal")
-        flip_v = st.checkbox("Miroir vertical")
+    elif pattern_type == "geometric":
+        # Formes géométriques
+        img = np.zeros((size, size, 3), dtype=np.uint8)
+        img.fill(30)
         
-        st.markdown("#### Ajustements")
-        brightness = st.slider("Luminosité", 0.0, 2.0, 1.0, 0.1,
-                              help="Ajuster la luminosité de l'image")
-        contrast = st.slider("Contraste", 0.0, 2.0, 1.0, 0.1,
-                            help="Ajuster le contraste de l'image")
+        # Carrés concentriques
+        for k in range(1, 6):
+            offset = k * 40
+            color = (k * 40, k * 30, 255 - k * 40)
+            cv2.rectangle(img, (offset, offset), (size-offset, size-offset), color, 8)
         
-        st.markdown("#### Filtres")
-        col_f1, col_f2 = st.columns(2)
-        with col_f1:
-            grayscale = st.checkbox("Niveaux de gris")
-            blur = st.checkbox("Flou artistique")
-        with col_f2:
-            edges = st.checkbox("Détection contours")
-            sharpen = st.checkbox("Accentuation")
+        # Cercles
+        for k in range(1, 4):
+            radius = k * 60
+            color = (255 - k * 60, k * 60, 150)
+            cv2.circle(img, (size//2, size//2), radius, color, 6)
+    
+    elif pattern_type == "color_bars":
+        # Barres de couleur
+        img = np.zeros((size, size, 3), dtype=np.uint8)
+        bar_width = size // 8
+        colors = [
+            (255, 0, 0), (255, 128, 0), (255, 255, 0), (0, 255, 0),
+            (0, 255, 255), (0, 0, 255), (128, 0, 255), (255, 0, 255)
+        ]
         
-        if blur:
-            blur_amount = st.slider("Intensité flou", 1, 25, 9, 2)
+        for i, color in enumerate(colors):
+            start_x = i * bar_width
+            end_x = (i + 1) * bar_width
+            img[:, start_x:end_x] = color
     
-    with tab_advanced:
-        st.markdown("#### Effets Artistiques")
-        effect = st.selectbox(
-            "Style",
-            ["Aucun", "Sépia Vintage", "Dessin au crayon", "Aquarelle", 
-             "Pop Art", "Noir & Blanc Pro", "Rétro 80s", "Effet Cinéma"]
-        )
+    else:  # pattern_type == "test_chart"
+        # Chartre de test professionnelle
+        img = np.ones((size, size, 3), dtype=np.uint8) * 240
         
-        st.markdown("#### Corrections")
-        saturation = st.slider("Saturation", 0.0, 3.0, 1.0, 0.1)
-        temperature = st.slider("Température", -100, 100, 0)
+        # Grille
+        for i in range(0, size, 32):
+            cv2.line(img, (i, 0), (i, size), (200, 200, 200), 1)
+            cv2.line(img, (0, i), (size, i), (200, 200, 200), 1)
         
-        st.markdown("#### Effets Spéciaux")
-        vignette = st.checkbox("Vignettage")
-        if vignette:
-            vignette_strength = st.slider("Intensité", 0.1, 1.0, 0.5, 0.1)
+        # Échelles de gris
+        for i in range(10):
+            intensity = i * 25
+            x1, x2 = 50 + i * 40, 50 + (i + 1) * 40
+            cv2.rectangle(img, (x1, 50), (x2, 100), (intensity, intensity, intensity), -1)
+            cv2.putText(img, str(intensity), (x1 + 10, 120), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (0, 0, 0), 1)
+        
+        # Couleurs primaires
+        colors = [(255, 0, 0), (0, 255, 0), (0, 0, 255), (255, 255, 0), (255, 0, 255), (0, 255, 255)]
+        for i, color in enumerate(colors):
+            x = 50 + i * 70
+            cv2.rectangle(img, (x, 150), (x + 60, 200), color, -1)
+        
+        # Texte
+        cv2.putText(img, "MASTER PRO TEST CHART", (100, 250), cv2.FONT_HERSHEY_COMPLEX, 1.2, (0, 0, 0), 2)
+        cv2.putText(img, f"Resolution: {size}x{size}px", (150, 300), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (50, 50, 50), 1)
+        cv2.putText(img, datetime.now().strftime("%Y-%m-%d %H:%M:%S"), (150, 330), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (100, 100, 100), 1)
     
-    st.markdown("---")
-    st.markdown("### 💾 EXPORT")
-    
-    export_format = st.selectbox(
-        "Format",
-        ["PNG (Haute qualité)", "JPEG (Optimisé)", "TIFF", "BMP"],
-        help="Choisissez le format d'export"
-    )
-    
-    if "JPEG" in export_format:
-        quality = st.slider("Qualité", 50, 100, 95)
-    
-    watermark = st.checkbox("Ajouter signature")
-    if watermark:
-        signature = st.text_input("Signature", "MASTER IABD")
-        wm_position = st.selectbox("Position", ["Bas droite", "Bas gauche", "Centre"])
-    
-    generate_pdf = st.checkbox("Générer rapport PDF", value=True,
-                              help="Créer un rapport professionnel en PDF")
-    
-    st.markdown("---")
-    
-    # Bouton principal avec style premium
-    process_clicked = st.button(
-        "🚀 LANCER LE TRAITEMENT", 
-        type="primary", 
-        use_container_width=True,
-        help="Appliquer tous les filtres et effets"
-    )
-    
-    if process_clicked:
-        st.balloons()
+    return Image.fromarray(img)
 
 # -----------------------------
 # FONCTIONS DE TRAITEMENT
 # -----------------------------
-def create_example_image(type_img):
-    """Crée une image d'exemple professionnelle"""
-    if type_img == "landscape":
-        img = Image.new('RGB', (800, 500), color='#1E3A8A')
-        draw = ImageDraw.Draw(img)
-        
-        # Dégradé de ciel
-        for i in range(500):
-            r = int(30 + (i/500)*100)
-            g = int(58 + (i/500)*100)
-            b = int(138 + (i/500)*50)
-            draw.line([(0, i), (800, i)], fill=(r, g, b))
-        
-        # Montagnes
-        draw.polygon([(100, 300), (400, 100), (700, 300)], fill='#064E3B')
-        draw.polygon([(300, 350), (550, 150), (750, 350)], fill='#065F46')
-        
-        # Soleil
-        draw.ellipse([600, 50, 700, 150], fill='#F59E0B')
-        
-        return np.array(img)
+def apply_effects(image_np, effects):
+    """Applique les effets sélectionnés à l'image"""
+    processed = image_np.copy()
     
-    else:  # portrait
-        img = Image.new('RGB', (500, 700), color='#F8FAFC')
-        draw = ImageDraw.Draw(img)
-        
-        # Dégradé d'arrière-plan
-        for i in range(700):
-            r = 248 - int((i/700)*20)
-            g = 250 - int((i/700)*20)
-            b = 252 - int((i/700)*20)
-            draw.line([(0, i), (500, i)], fill=(r, g, b))
-        
-        # Visage
-        draw.ellipse([150, 150, 350, 350], fill='#FED7AA', outline='#F97316', width=2)
-        
-        # Yeux
-        draw.ellipse([200, 220, 240, 260], fill='#1E40AF')
-        draw.ellipse([260, 220, 300, 260], fill='#1E40AF')
-        
-        # Sourcils
-        draw.rectangle([195, 190, 245, 200], fill='#92400E')
-        draw.rectangle([255, 190, 305, 200], fill='#92400E')
-        
-        # Nez
-        draw.polygon([(250, 260), (240, 290), (260, 290)], fill='#F97316')
-        
-        # Bouche
-        draw.arc([220, 300, 280, 330], 0, 180, fill='#DC2626', width=3)
-        
-        return np.array(img)
-
-def apply_artistic_effect(image, effect_name):
-    """Applique des effets artistiques professionnels"""
-    if effect_name == "Aucun":
-        return image
+    # Rotation
+    if effects['rotation'] != "Aucune":
+        if effects['rotation'] == "90° Droite":
+            processed = cv2.rotate(processed, cv2.ROTATE_90_CLOCKWISE)
+        elif effects['rotation'] == "90° Gauche":
+            processed = cv2.rotate(processed, cv2.ROTATE_90_COUNTERCLOCKWISE)
+        elif effects['rotation'] == "180°":
+            processed = cv2.rotate(processed, cv2.ROTATE_180)
     
-    elif effect_name == "Sépia Vintage":
-        sepia_filter = np.array([[0.393, 0.769, 0.189],
-                                 [0.349, 0.686, 0.168],
-                                 [0.272, 0.534, 0.131]])
-        sepia = cv2.transform(image, sepia_filter)
-        sepia = cv2.convertScaleAbs(sepia, alpha=0.9, beta=10)
-        noise = np.random.normal(0, 10, sepia.shape)
-        return np.clip(sepia + noise, 0, 255).astype(np.uint8)
+    # Conversion niveaux de gris
+    if effects['grayscale']:
+        if len(processed.shape) == 3:
+            processed = cv2.cvtColor(processed, cv2.COLOR_RGB2GRAY)
     
-    elif effect_name == "Dessin au crayon":
-        gray = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
+    # Flou gaussien
+    if effects['blur']:
+        kernel = effects['blur_intensity'] * 2 + 1
+        if len(processed.shape) == 3:
+            processed = cv2.GaussianBlur(processed, (kernel, kernel), 0)
+        else:
+            processed = cv2.GaussianBlur(processed, (kernel, kernel), 0)
+    
+    # Détection de contours
+    if effects['edges']:
+        if len(processed.shape) == 3:
+            gray = cv2.cvtColor(processed, cv2.COLOR_RGB2GRAY)
+        else:
+            gray = processed
+        processed = cv2.Canny(gray, effects['edge_low'], effects['edge_high'])
+    
+    # Inversion
+    if effects['invert']:
+        processed = 255 - processed
+    
+    # Effet HDR
+    if effects['hdr'] and len(processed.shape) == 3:
+        processed = cv2.detailEnhance(processed, sigma_s=10, sigma_r=0.15)
+    
+    # Effet croquis
+    if effects['sketch']:
+        if len(processed.shape) == 3:
+            gray = cv2.cvtColor(processed, cv2.COLOR_RGB2GRAY)
+        else:
+            gray = processed
         inverted = 255 - gray
         blurred = cv2.GaussianBlur(inverted, (21, 21), 0)
-        pencil = cv2.divide(gray, 255 - blurred, scale=256.0)
-        pencil = cv2.convertScaleAbs(pencil, alpha=1.2, beta=20)
-        return cv2.cvtColor(pencil, cv2.COLOR_GRAY2RGB)
+        processed = cv2.divide(gray, 255 - blurred, scale=256)
     
-    elif effect_name == "Aquarelle":
-        return cv2.stylization(image, sigma_s=60, sigma_r=0.6)
+    # Ajustements de base
+    if effects['brightness'] != 0 or effects['contrast'] != 1.0:
+        processed = cv2.convertScaleAbs(processed, alpha=effects['contrast'], beta=effects['brightness'])
     
-    elif effect_name == "Pop Art":
-        Z = image.reshape((-1, 3))
-        Z = np.float32(Z)
-        criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 10, 1.0)
-        K = 6
-        _, labels, centers = cv2.kmeans(Z, K, None, criteria, 10, cv2.KMEANS_RANDOM_CENTERS)
-        centers = np.uint8(centers)
-        result = centers[labels.flatten()]
-        result = result.reshape(image.shape)
-        return cv2.convertScaleAbs(result, alpha=1.5, beta=30)
+    # Saturation (uniquement pour images couleur)
+    if effects['saturation'] != 1.0 and len(processed.shape) == 3:
+        hsv = cv2.cvtColor(processed, cv2.COLOR_RGB2HSV)
+        hsv[:, :, 1] = np.clip(hsv[:, :, 1] * effects['saturation'], 0, 255)
+        processed = cv2.cvtColor(hsv, cv2.COLOR_HSV2RGB)
     
-    elif effect_name == "Noir & Blanc Pro":
-        gray = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
-        gray = cv2.equalizeHist(gray)
-        gray = cv2.medianBlur(gray, 3)
-        return cv2.cvtColor(gray, cv2.COLOR_GRAY2RGB)
-    
-    elif effect_name == "Rétro 80s":
-        hsv = cv2.cvtColor(image, cv2.COLOR_RGB2HSV)
-        hsv[:,:,0] = (hsv[:,:,0] + 20) % 180
-        hsv[:,:,1] = np.clip(hsv[:,:,1] * 1.5, 0, 255)
-        retro = cv2.cvtColor(hsv, cv2.COLOR_HSV2RGB)
-        for i in range(0, retro.shape[0], 3):
-            retro[i:i+1, :] = retro[i:i+1, :] * 0.8
-        return retro
-    
-    elif effect_name == "Effet Cinéma":
-        h, w = image.shape[:2]
-        bar_height = h // 6
-        cinematic = image.copy()
-        cinematic[:bar_height, :] = 0
-        cinematic[h-bar_height:, :] = 0
-        cinematic = cv2.convertScaleAbs(cinematic, alpha=0.85, beta=10)
-        return cinematic
-    
-    return image
+    return processed
 
-def add_signature_pro(image_pil, text, position):
-    """Ajoute une signature professionnelle"""
-    draw = ImageDraw.Draw(image_pil, 'RGBA')
-    
-    try:
-        font = ImageFont.truetype("arial.ttf", 36)
-    except:
-        font = ImageFont.load_default()
-    
-    bbox = draw.textbbox((0, 0), text, font=font)
-    text_width = bbox[2] - bbox[0]
-    text_height = bbox[3] - bbox[1]
-    
-    positions = {
-        "Bas droite": (image_pil.width - text_width - 40, image_pil.height - text_height - 40),
-        "Bas gauche": (40, image_pil.height - text_height - 40),
-        "Centre": ((image_pil.width - text_width) // 2, (image_pil.height - text_height) // 2)
+# -----------------------------
+# INITIALISATION SESSION STATE
+# -----------------------------
+if 'uploaded_file' not in st.session_state:
+    st.session_state.uploaded_file = None
+if 'processed_image' not in st.session_state:
+    st.session_state.processed_image = None
+if 'effects' not in st.session_state:
+    st.session_state.effects = {
+        'rotation': "Aucune",
+        'grayscale': False,
+        'blur': False,
+        'blur_intensity': 3,
+        'edges': False,
+        'edge_low': 100,
+        'edge_high': 200,
+        'invert': False,
+        'hdr': False,
+        'sketch': False,
+        'brightness': 0,
+        'contrast': 1.0,
+        'saturation': 1.0
     }
-    
-    pos = positions.get(position, positions["Bas droite"])
-    
-    # Ombre portée
-    for offset in [(2,2), (1,1)]:
-        draw.text((pos[0]+offset[0], pos[1]+offset[1]), text, 
-                  font=font, fill=(0,0,0,150))
-    
-    # Texte avec léger dégradé
-    draw.text(pos, text, font=font, fill=(255,255,255,220))
-    
-    return image_pil
-
-def create_professional_pdf(original, processed, params, filters_details):
-    """Crée un rapport PDF professionnel avec détails des filtres"""
-    from reportlab.lib.pagesizes import A4
-    from reportlab.pdfgen import canvas
-    from reportlab.lib.utils import ImageReader
-    from reportlab.lib.colors import HexColor
-    from reportlab.platypus import Table, TableStyle, Paragraph, Spacer
-    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-    from reportlab.lib.units import inch
-    
-    buffer = BytesIO()
-    c = canvas.Canvas(buffer, pagesize=A4)
-    width, height = A4
-    
-    # En-tête avec dégradé
-    c.setFillColor(HexColor('#8B5CF6'))
-    c.rect(0, height-120, width, 120, fill=1, stroke=0)
-    
-    c.setFillColor(HexColor('#FFFFFF'))
-    c.setFont("Helvetica-Bold", 28)
-    c.drawCentredString(width/2, height-60, "Rapport Professionnel de Traitement")
-    
-    c.setFont("Helvetica", 14)
-    c.drawCentredString(width/2, height-90, "Master 2 Intelligence Artificielle & Big Data")
-    
-    # Informations du traitement
-    c.setFillColor(HexColor('#F1F5F9'))
-    c.setFont("Helvetica-Bold", 16)
-    c.drawString(50, height-150, "📋 Informations du Projet")
-    
-    info_y = height-180
-    c.setFont("Helvetica", 12)
-    
-    infos = [
-        ("📅 Date et heure", datetime.now().strftime("%d/%m/%Y %H:%M")),
-        ("🎨 Thème", "Mode système détecté"),
-        ("📐 Dimensions originales", f"{original.width} × {original.height} px"),
-        ("📏 Dimensions finales", f"{processed.width} × {processed.height} px"),
-        ("🔢 Nombre de filtres", str(params.get("Nombre de filtres", 0)))
-    ]
-    
-    for label, value in infos:
-        c.drawString(60, info_y, f"• {label}: {value}")
-        info_y -= 25
-    
-    # Détails des filtres appliqués
-    c.setFont("Helvetica-Bold", 16)
-    c.drawString(50, info_y-30, "🎛️ Détails des Filtres Appliqués")
-    
-    filter_y = info_y-60
-    c.setFont("Helvetica", 11)
-    
-    for i, (filter_name, details) in enumerate(filters_details.items()):
-        c.drawString(60, filter_y, f"✓ {filter_name}: {details}")
-        filter_y -= 20
-        if filter_y < 100:  # Nouvelle page si nécessaire
-            c.showPage()
-            filter_y = height-100
-    
-    # Images
-    img_width = 240
-    img_height = 180
-    
-    # Image originale
-    orig_buf = BytesIO()
-    original.save(orig_buf, format='PNG', quality=100)
-    orig_buf.seek(0)
-    
-    c.drawImage(ImageReader(orig_buf), 50, filter_y-200, width=img_width, height=img_height)
-    c.drawString(50, filter_y-220, "🖼️ Image Originale")
-    
-    # Image traitée
-    proc_buf = BytesIO()
-    processed.save(proc_buf, format='PNG', quality=100)
-    proc_buf.seek(0)
-    
-    c.drawImage(ImageReader(proc_buf), width-img_width-50, filter_y-200, width=img_width, height=img_height)
-    c.drawString(width-img_width-50, filter_y-220, "✨ Image Traitée")
-    
-    # Pied de page
-    c.setFillColor(HexColor('#94A3B8'))
-    c.setFont("Helvetica-Oblique", 10)
-    c.drawCentredString(width/2, 40, 
-                       "AI Vision Pro - Application développée dans le cadre du Master 2 IABD")
-    c.drawCentredString(width/2, 25, 
-                       "© 2024 - Tous droits réservés")
-    
-    c.save()
-    buffer.seek(0)
-    return buffer
+if 'history' not in st.session_state:
+    st.session_state.history = []
+if 'test_image_generated' not in st.session_state:
+    st.session_state.test_image_generated = False
+if 'test_image_data' not in st.session_state:
+    st.session_state.test_image_data = None
+if 'pattern_type' not in st.session_state:
+    st.session_state.pattern_type = "gradient"
 
 # -----------------------------
-# TRAITEMENT PRINCIPAL
-# -----------------------------
-image_to_process = None
-
-if uploaded_file:
-    image = Image.open(uploaded_file)
-    image_to_process = np.array(image.convert('RGB'))
-    image_pil = image
-    
-elif example_landscape or example_portrait:
-    if example_landscape:
-        image_to_process = create_example_image("landscape")
-    else:
-        image_to_process = create_example_image("portrait")
-    image_pil = Image.fromarray(image_to_process)
-
-if image_to_process is not None and (uploaded_file or example_landscape or example_portrait):
-    # Simuler un traitement avec animation
-    with st.spinner("🔄 Traitement en cours..."):
-        time.sleep(0.8)
-        
-        # Sauvegarder l'original
-        original_img = image_to_process.copy()
-        st.session_state.original_image = original_img
-        
-        # Réinitialiser les filtres
-        applied_filters = []
-        filters_details = {}
-        
-        # Démarrer le traitement
-        processed = original_img.copy()
-        
-        # 1. Rotation
-        if rotation != "Aucune":
-            if rotation == "90° Droite":
-                processed = cv2.rotate(processed, cv2.ROTATE_90_CLOCKWISE)
-                applied_filters.append("Rotation 90° Droite")
-                filters_details["Rotation"] = "90° vers la droite"
-            elif rotation == "90° Gauche":
-                processed = cv2.rotate(processed, cv2.ROTATE_90_COUNTERCLOCKWISE)
-                applied_filters.append("Rotation 90° Gauche")
-                filters_details["Rotation"] = "90° vers la gauche"
-            elif rotation == "180°":
-                processed = cv2.rotate(processed, cv2.ROTATE_180)
-                applied_filters.append("Rotation 180°")
-                filters_details["Rotation"] = "180° (retournement complet)"
-        
-        # 2. Miroir
-        if flip_h:
-            processed = cv2.flip(processed, 1)
-            applied_filters.append("Miroir horizontal")
-            filters_details["Miroir horizontal"] = "Image retournée horizontalement"
-        if flip_v:
-            processed = cv2.flip(processed, 0)
-            applied_filters.append("Miroir vertical")
-            filters_details["Miroir vertical"] = "Image retournée verticalement"
-        
-        # 3. Luminosité
-        if brightness != 1.0:
-            adjustment = (brightness - 1) * 60
-            processed = cv2.convertScaleAbs(processed, alpha=1.0, beta=adjustment)
-            applied_filters.append(f"Luminosité: {brightness}")
-            filters_details["Luminosité"] = f"Multiplicateur: {brightness} (ajustement: {adjustment:+})"
-        
-        # 4. Contraste
-        if contrast != 1.0:
-            processed = cv2.convertScaleAbs(processed, alpha=contrast, beta=0)
-            applied_filters.append(f"Contraste: {contrast}")
-            filters_details["Contraste"] = f"Multiplicateur: {contrast}"
-        
-        # 5. Niveaux de gris
-        if grayscale:
-            if len(processed.shape) == 3:
-                processed = cv2.cvtColor(processed, cv2.COLOR_RGB2GRAY)
-                processed = cv2.cvtColor(processed, cv2.COLOR_GRAY2RGB)
-            applied_filters.append("Niveaux de gris")
-            filters_details["Niveaux de gris"] = "Conversion RGB vers niveaux de gris"
-        
-        # 6. Flou
-        if blur and 'blur_amount' in locals():
-            ksize = blur_amount if blur_amount % 2 == 1 else blur_amount + 1
-            processed = cv2.GaussianBlur(processed, (ksize, ksize), 0)
-            applied_filters.append(f"Flou gaussien")
-            filters_details["Flou gaussien"] = f"Kernel size: {ksize}×{ksize}, Sigma: 0"
-        
-        # 7. Accentuation
-        if sharpen:
-            kernel = np.array([[-1,-1,-1], [-1,9,-1], [-1,-1,-1]])
-            processed = cv2.filter2D(processed, -1, kernel)
-            applied_filters.append("Accentuation")
-            filters_details["Accentuation"] = "Kernel de netteté 3×3 appliqué"
-        
-        # 8. Contours
-        if edges:
-            if len(processed.shape) == 3:
-                gray = cv2.cvtColor(processed, cv2.COLOR_RGB2GRAY)
-            else:
-                gray = processed
-            edges_img = cv2.Canny(gray, 100, 200)
-            processed = cv2.cvtColor(edges_img, cv2.COLOR_GRAY2RGB)
-            applied_filters.append("Détection de contours")
-            filters_details["Détection de contours"] = "Algorithme Canny (seuils: 100-200)"
-        
-        # 9. Effet artistique
-        if effect != "Aucun":
-            processed = apply_artistic_effect(processed, effect)
-            applied_filters.append(effect)
-            filters_details["Effet artistique"] = effect
-        
-        # 10. Saturation
-        if saturation != 1.0 and len(processed.shape) == 3:
-            hsv = cv2.cvtColor(processed, cv2.COLOR_RGB2HSV)
-            hsv[:,:,1] = np.clip(hsv[:,:,1] * saturation, 0, 255)
-            processed = cv2.cvtColor(hsv, cv2.COLOR_HSV2RGB)
-            applied_filters.append(f"Saturation: {saturation}");
-            filters_details["Saturation"] = f"Multiplicateur: {saturation}"
-        
-        # 11. Température
-        if temperature != 0 and len(processed.shape) == 3:
-            if temperature > 0:
-                processed[:,:,0] = np.clip(processed[:,:,0] + temperature//2, 0, 255)
-                temp_desc = f"Chaud (+{temperature})"
-            else:
-                processed[:,:,2] = np.clip(processed[:,:,2] + abs(temperature)//2, 0, 255)
-                temp_desc = f"Froid ({temperature})"
-            applied_filters.append(f"Température: {temperature}")
-            filters_details["Température couleur"] = temp_desc
-        
-        # 12. Vignettage
-        if 'vignette' in locals() and vignette:
-            h, w = processed.shape[:2]
-            kernel_x = cv2.getGaussianKernel(w, w/(vignette_strength*10))
-            kernel_y = cv2.getGaussianKernel(h, h/(vignette_strength*10))
-            kernel = kernel_y * kernel_x.T
-            mask = kernel / kernel.max()
-            mask = np.power(mask, 0.8)
-            if len(processed.shape) == 3:
-                mask = mask[:, :, np.newaxis]
-            processed = (processed * mask).astype(np.uint8)
-            applied_filters.append("Vignettage")
-            filters_details["Vignettage"] = f"Intensité: {vignette_strength}"
-        
-        # Convertir en PIL
-        if len(processed.shape) == 2:
-            processed_pil = Image.fromarray(processed)
-        else:
-            processed_pil = Image.fromarray(processed)
-        
-        # 13. Signature
-        if watermark and 'signature' in locals():
-            processed_pil = add_signature_pro(processed_pil, signature, wm_position)
-            applied_filters.append(f"Signature: {signature}")
-            filters_details["Signature"] = f"'{signature}' - Position: {wm_position}"
-        
-        # Sauvegarder dans la session
-        st.session_state.current_image = processed_pil
-        st.session_state.applied_filters = applied_filters
-        st.session_state.processing_details = filters_details
-        st.session_state.processed_images.append({
-            'time': datetime.now(),
-            'filters': applied_filters.copy(),
-            'filters_details': filters_details.copy(),
-            'image': processed_pil.copy()
-        })
-        
-        st.success("✅ Traitement terminé avec succès!")
-
-# -----------------------------
-# AFFICHAGE DES RÉSULTATS
-# -----------------------------
-if st.session_state.current_image is not None:
-    processed_pil = st.session_state.current_image
-    
-    # Métriques visuelles
-    st.markdown("## 📊 RÉSULTATS DU TRAITEMENT")
-    
-    col1, col2, col3, col4 = st.columns(4)
-    
-    with col1:
-        st.markdown('<div class="metric-card">', unsafe_allow_html=True)
-        st.markdown("**LARGEUR**")
-        st.markdown(f"<h2>{processed_pil.width}px</h2>", unsafe_allow_html=True)
-        st.markdown('</div>', unsafe_allow_html=True)
-    
-    with col2:
-        st.markdown('<div class="metric-card">', unsafe_allow_html=True)
-        st.markdown("**HAUTEUR**")
-        st.markdown(f"<h2>{processed_pil.height}px</h2>", unsafe_allow_html=True)
-        st.markdown('</div>', unsafe_allow_html=True)
-    
-    with col3:
-        st.markdown('<div class="metric-card">', unsafe_allow_html=True)
-        st.markdown("**FORMAT**")
-        st.markdown(f"<h2>{processed_pil.mode}</h2>", unsafe_allow_html=True)
-        st.markdown('</div>', unsafe_allow_html=True)
-    
-    with col4:
-        st.markdown('<div class="metric-card">', unsafe_allow_html=True)
-        st.markdown("**FILTRES**")
-        st.markdown(f"<h2>{len(st.session_state.applied_filters)}</h2>", unsafe_allow_html=True)
-        st.markdown('</div>', unsafe_allow_html=True)
-    
-    # Images avant/après
-    st.markdown("## 🖼️ COMPARAISON")
-    
-    col_img1, col_img2 = st.columns(2)
-    
-    with col_img1:
-        st.markdown('<div class="image-card">', unsafe_allow_html=True)
-        st.markdown("### 🎯 ORIGINALE")
-        if st.session_state.original_image is not None:
-            original_pil = Image.fromarray(st.session_state.original_image)
-            st.image(original_pil, use_column_width=True)
-            st.caption(f"Dimensions: {original_pil.width}×{original_pil.height}px • Mode: {original_pil.mode}")
-        st.markdown('</div>', unsafe_allow_html=True)
-    
-    with col_img2:
-        st.markdown('<div class="image-card">', unsafe_allow_html=True)
-        st.markdown("### ✨ TRAITÉE")
-        st.image(processed_pil, use_column_width=True)
-        st.caption(f"Filtres appliqués: {len(st.session_state.applied_filters)}")
-        st.markdown('</div>', unsafe_allow_html=True)
-    
-    # -----------------------------
-    # DÉTAILS DES TRAITEMENTS
-    # -----------------------------
-    st.markdown("---")
-    st.markdown("## 🔧 DÉTAILS DES TRAITEMENTS APPLIQUÉS")
-    
-    if st.session_state.applied_filters:
-        st.markdown("### 📋 Chronologie des Traitements")
-        
-        col_details1, col_details2 = st.columns([2, 1])
-        
-        with col_details1:
-            st.markdown('<div class="details-card">', unsafe_allow_html=True)
-            st.markdown("#### 🎛️ Liste des Filtres")
-            
-            for i, filt in enumerate(st.session_state.applied_filters, 1):
-                st.markdown(f"""
-                <div class="filter-item">
-                    <div style="width: 40px; height: 40px; border-radius: 10px; background: linear-gradient(135deg, var(--primary), var(--secondary)); display: flex; align-items: center; justify-content: center; margin-right: 15px; color: white; font-size: 1.2rem;">{i}</div>
-                    <div>
-                        <strong>{filt}</strong>
-                        <div style="font-size: 0.9rem; color: var(--text-secondary); margin-top: 4px;">
-                            {st.session_state.processing_details.get(filt.split(':')[0], 'Appliqué avec succès')}
-                        </div>
-                    </div>
-                </div>
-                """, unsafe_allow_html=True)
-            st.markdown('</div>', unsafe_allow_html=True)
-        
-        with col_details2:
-            st.markdown('<div class="details-card">', unsafe_allow_html=True)
-            st.markdown("#### 📊 Statistiques")
-            
-            stats = {
-                "Total filtres": len(st.session_state.applied_filters),
-                "Transformations": len([f for f in st.session_state.applied_filters 
-                                      if "Rotation" in f or "Miroir" in f]),
-                "Ajustements": len([f for f in st.session_state.applied_filters 
-                                   if "Luminosité" in f or "Contraste" in f or "Saturation" in f]),
-                "Effets artistiques": len([f for f in st.session_state.applied_filters 
-                                         if any(x in f for x in ["Sépia", "Crayon", "Aquarelle", "Pop Art", "Rétro", "Cinéma"])])
-            }
-            
-            for key, value in stats.items():
-                st.markdown(f"""
-                <div style="margin: 10px 0; padding: 12px; background: var(--card-bg); 
-                    border-radius: 10px; border-left: 4px solid var(--accent);">
-                    <div style="font-size: 0.9rem; color: var(--text-secondary);">{key}</div>
-                    <div style="font-size: 1.5rem; font-weight: 700; color: var(--primary);">{value}</div>
-                </div>
-                """, unsafe_allow_html=True)
-            st.markdown('</div>', unsafe_allow_html=True)
-        
-        # Tags des filtres
-        st.markdown("### 🏷️ Tags des Filtres")
-        filter_tags = " ".join([f'<span class="filter-tag">{filt}</span>' for filt in st.session_state.applied_filters[:10]])
-        st.markdown(f'<div style="margin: 1rem 0;">{filter_tags}</div>', unsafe_allow_html=True)
-        
-        # Résumé technique
-        st.markdown('<div class="details-card">', unsafe_allow_html=True)
-        st.markdown("#### 📝 Résumé Technique")
-        
-        tech_details = {
-            "Algorithme de traitement": "OpenCV + NumPy",
-            "Méthode de convolution": "Kernel-based filtering",
-            "Conversion couleur": "RGB ↔ HSV ↔ GRAY",
-            "Détection contours": "Algorithme de Canny",
-            "Traitement batch": "Séquentiel en mémoire",
-            "Optimisation": "Vectorisation NumPy"
-        }
-        
-        for key, value in tech_details.items():
-            st.markdown(f"• **{key}**: {value}")
-        st.markdown('</div>', unsafe_allow_html=True)
-    
-    # -----------------------------
-    # EXPORTATION
-    # -----------------------------
-    st.markdown("---")
-    st.markdown("## 💾 EXPORTATION PROFESSIONNELLE")
-    
-    col_exp1, col_exp2, col_exp3 = st.columns(3)
-    
-    with col_exp1:
-        # Export image
-        buffer = io.BytesIO()
-        
-        if "PNG" in export_format:
-            processed_pil.save(buffer, format="PNG")
-            mime = "image/png"
-            ext = "png"
-        elif "JPEG" in export_format:
-            quality_val = quality if 'quality' in locals() else 95
-            processed_pil.save(buffer, format="JPEG", quality=quality_val, optimize=True)
-            mime = "image/jpeg"
-            ext = "jpg"
-        elif "TIFF" in export_format:
-            processed_pil.save(buffer, format="TIFF")
-            mime = "image/tiff"
-            ext = "tiff"
-        else:
-            processed_pil.save(buffer, format="BMP")
-            mime = "image/bmp"
-            ext = "bmp"
-        
-        buffer.seek(0)
-        
-        st.download_button(
-            label=f"📥 TÉLÉCHARGER (.{ext})",
-            data=buffer,
-            file_name=f"image_traitee_{datetime.now().strftime('%Y%m%d_%H%M%S')}.{ext}",
-            mime=mime,
-            use_container_width=True
-        )
-    
-    with col_exp2:
-        # Rapport PDF avec détails
-        if generate_pdf and st.session_state.original_image is not None:
-            original_pil_for_pdf = Image.fromarray(st.session_state.original_image)
-            params = {
-                "Nombre de filtres": len(st.session_state.applied_filters),
-                "Rotation": rotation,
-                "Effet artistique": effect,
-                "Export format": export_format.split()[0],
-                "Signature": "Oui" if watermark else "Non",
-                "Thème": "Système détecté"
-            }
-            
-            pdf_buffer = create_professional_pdf(
-                original_pil_for_pdf, 
-                processed_pil, 
-                params,
-                st.session_state.processing_details
-            )
-            
-            st.download_button(
-                label="📄 RAPPORT COMPLET (PDF)",
-                data=pdf_buffer,
-                file_name=f"rapport_traitement_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf",
-                mime="application/pdf",
-                use_container_width=True
-            )
-    
-    with col_exp3:
-        # Actions
-        col_act1, col_act2 = st.columns(2)
-        with col_act1:
-            if st.button("🔄 Nouveau", use_container_width=True):
-                for key in ['current_image', 'original_image', 'applied_filters', 'processing_details']:
-                    if key in st.session_state:
-                        del st.session_state[key]
-                st.rerun()
-        with col_act2:
-            if st.button("📋 Copier détails", use_container_width=True):
-                details_json = {
-                    "filters": st.session_state.applied_filters,
-                    "filters_details": st.session_state.processing_details,
-                    "timestamp": datetime.now().isoformat(),
-                    "image_size": f"{processed_pil.width}x{processed_pil.height}"
-                }
-                st.code(json.dumps(details_json, indent=2, ensure_ascii=False))
-                st.success("✅ Détails copiés !")
-    
-    # Galerie d'effets
-    st.markdown("---")
-    st.markdown("## 🎨 GALERIE D'EFFETS")
-    
-    col_gal1, col_gal2, col_gal3 = st.columns(3)
-    
-    with col_gal1:
-        if st.button("🖼️ Afficher Sépia", use_container_width=True):
-            sepia_img = apply_artistic_effect(st.session_state.original_image, "Sépia Vintage")
-            st.image(sepia_img, caption="Effet Sépia Vintage", use_column_width=True)
-    
-    with col_gal2:
-        if st.button("✏️ Afficher Crayon", use_container_width=True):
-            pencil_img = apply_artistic_effect(st.session_state.original_image, "Dessin au crayon")
-            st.image(pencil_img, caption="Dessin au Crayon", use_column_width=True)
-    
-    with col_gal3:
-        if st.button("🎭 Afficher Pop Art", use_container_width=True):
-            popart_img = apply_artistic_effect(st.session_state.original_image, "Pop Art")
-            st.image(popart_img, caption="Style Pop Art", use_column_width=True)
-
-else:
-    # -----------------------------
-    # PAGE D'ACCUEIL
-    # -----------------------------
-    st.markdown("""
-    <div style='text-align: center; padding: 4rem 2rem;'>
-        <h2 style='color: var(--text-primary); margin-bottom: 1.5rem;'>🚀 BIENVENUE DANS AI VISION PRO</h2>
-        <p style='color: var(--text-secondary); font-size: 1.2rem; max-width: 800px; margin: 0 auto 3rem auto; line-height: 1.6;'>
-        Studio professionnel de traitement d'images inspiré des standards Canva et Photoshop.
-        Développé avec les dernières technologies pour le Master 2 Intelligence Artificielle & Big Data.
-        </p>
-    </div>
-    """, unsafe_allow_html=True)
-    
-    # Features avec design premium
-    col_f1, col_f2 = st.columns(2)
-    
-    with col_f1:
-        st.markdown('<div class="feature-card">', unsafe_allow_html=True)
-        st.markdown("### 🎛️ TRAITEMENTS DÉTAILLÉS")
-        st.markdown("""
-        • Chronologie complète
-        • Détails techniques
-        • Statistiques avancées
-        • Tags visuels
-        • Résumé automatique
-        """)
-        st.markdown('</div>', unsafe_allow_html=True)
-    
-    with col_f2:
-        st.markdown('<div class="feature-card">', unsafe_allow_html=True)
-        st.markdown("### 📄 RAPPORTS COMPLETS")
-        st.markdown("""
-        • PDF professionnel
-        • Détails des filtres
-        • Comparaison visuelle
-        • Métriques techniques
-        • Historique complet
-        """)
-        st.markdown('</div>', unsafe_allow_html=True)
-    
-    # Instructions
-    st.markdown("---")
-    st.markdown("""
-    ### 📝 GUIDE DE DÉMARRAGE
-    
-    1. **Importez** une image depuis la barre latérale
-    2. **Ajustez** les paramètres dans les onglets
-    3. **Visualisez** les résultats avec détails complets
-    4. **Exportez** avec rapports professionnels
-    """)
-
-# -----------------------------
-# FOOTER PROFESSIONNEL
+# HEADER ANIMÉ
 # -----------------------------
 st.markdown("""
-<div class="footer">
-    <h3>🎓 PROJET 1 INTELLIGENCE ARTIFICIELLE & BIG DATA</h3>
-    <h4>EFEMBA Manuella - EYOUM Brayan - FEZE Loïck</h4>
-    <p>Projet1 OpenCV & Streamlit - Studio de Traitement d'Images Intelligent</p>
-    <div style="margin: 1.5rem 0; display: flex; justify-content: center; gap: 15px; flex-wrap: wrap;">
-        <span style="padding: 8px 16px; background: var(--card-bg); 
-            border-radius: 10px; font-size: 0.9rem; color: var(--text-secondary);">
-            🐍 Python
-        </span>
-        <span style="padding: 8px 16px; background: var(--card-bg); 
-            border-radius: 10px; font-size: 0.9rem; color: var(--text-secondary);">
-            📷 OpenCV
-        </span>
-        <span style="padding: 8px 16px; background: var(--card-bg); 
-            border-radius: 10px; font-size: 0.9rem; color: var(--text-secondary);">
-            🚀 Streamlit
-        </span>
-        <span style="padding: 8px 16px; background: var(--card-bg); 
-            border-radius: 10px; font-size: 0.9rem; color: var(--text-secondary);">
-            🎨 Pillow
-        </span>
+<div style="text-align: center; margin-bottom: 40px;">
+    <h1 class="main-title">
+        <span style="display: inline-block; animation: float 3s ease-in-out infinite;">🚀</span>
+        MASTER PRO AI STUDIO
+        <span style="display: inline-block; animation: float 3s ease-in-out infinite 0.5s;">🎨</span>
+    </h1>
+    <p class="subtitle">
+        <i class="fas fa-bolt" style="color: #00dbde;"></i>
+        Plateforme Professionnelle de Traitement d'Images IA
+        <i class="fas fa-brain" style="color: #fc00ff;"></i>
+    </p>
+</div>
+
+<style>
+@keyframes float {
+    0%, 100% { transform: translateY(0px); }
+    50% { transform: translateY(-10px); }
+}
+</style>
+""", unsafe_allow_html=True)
+
+# -----------------------------
+# ONGLETS PRINCIPAUX
+# -----------------------------
+tab1, tab2, tab3 = st.tabs(["🎨 STUDIO CREATIF", "📊 ANALYTICS", "🎮 GUIDE & PRÉRÉGLAGES"])
+
+with tab1:
+    col_main1, col_main2 = st.columns([1, 1])
+    
+    with col_main1:
+        st.markdown('<div class="glass-container">', unsafe_allow_html=True)
+        st.markdown('<h2 class="section-title"><i class="fas fa-cloud-upload-alt"></i> IMPORTATION</h2>', unsafe_allow_html=True)
+        
+        # Section Upload avec bouton de génération
+        col_upload_top = st.columns([3, 2])
+        
+        with col_upload_top[0]:
+            uploaded_file = st.file_uploader(
+                "Choisissez un fichier image",
+                type=["jpg", "jpeg", "png", "bmp", "tiff"],
+                key="file_uploader",
+                label_visibility="visible"
+            )
+            
+            if uploaded_file:
+                st.session_state.uploaded_file = uploaded_file
+                st.session_state.test_image_generated = False
+                st.success(f"✅ Fichier chargé: {uploaded_file.name}")
+        
+        with col_upload_top[1]:
+            st.markdown("### 🎲 Image de Test")
+            pattern_type = st.selectbox(
+                "Type d'image",
+                ["gradient", "geometric", "color_bars", "test_chart"],
+                format_func=lambda x: {
+                    "gradient": "🌈 Dégradé Complexe",
+                    "geometric": "🔷 Formes Géométriques", 
+                    "color_bars": "🎨 Barres de Couleur",
+                    "test_chart": "📊 Chartre de Test"
+                }[x]
+            )
+            
+            # BOUTON DE GÉNÉRATION FONCTIONNEL
+            if st.button("🚀 GÉNÉRER UNE IMAGE DE TEST", 
+                        use_container_width=True,
+                        type="primary",
+                        key="generate_test_button"):
+                
+                with st.spinner("🎨 Génération de l'image de test en cours..."):
+                    # Générer l'image
+                    test_image = generate_test_image_pattern(pattern_type)
+                    
+                    # Convertir en bytes pour le téléchargement
+                    buffer = io.BytesIO()
+                    test_image.save(buffer, format="PNG")
+                    buffer.seek(0)
+                    
+                    # Créer un faux fichier uploadé
+                    class FakeUploadedFile:
+                        def __init__(self, buffer, name):
+                            self.buffer = buffer
+                            self.name = name
+                            self.type = "image/png"
+                        
+                        def read(self):
+                            return self.buffer.getvalue()
+                    
+                    # Mettre à jour le session state
+                    st.session_state.test_image_data = buffer.getvalue()
+                    st.session_state.uploaded_file = FakeUploadedFile(
+                        buffer, 
+                        f"test_image_{pattern_type}_{datetime.now().strftime('%H%M%S')}.png"
+                    )
+                    st.session_state.test_image_generated = True
+                    st.session_state.pattern_type = pattern_type
+                    
+                    # Forcer le rerun pour afficher l'image
+                    st.rerun()
+        
+        # Afficher l'image chargée
+        if st.session_state.uploaded_file:
+            try:
+                if st.session_state.test_image_generated:
+                    # Afficher l'image de test générée
+                    test_image = Image.open(io.BytesIO(st.session_state.test_image_data))
+                    st.markdown("### 📸 Image de Test Générée")
+                    
+                    # Badge spécial pour image de test
+                    st.markdown('<div class="test-badge">🎲 IMAGE DE TEST</div>', unsafe_allow_html=True)
+                    st.image(test_image, use_column_width=True)
+                    
+                    # Informations sur l'image de test
+                    with st.expander("📋 Informations sur l'image de test"):
+                        col_info1, col_info2 = st.columns(2)
+                        with col_info1:
+                            st.metric("Type", {
+                                "gradient": "Dégradé Complexe",
+                                "geometric": "Formes Géométriques", 
+                                "color_bars": "Barres de Couleur",
+                                "test_chart": "Chartre de Test"
+                            }[st.session_state.pattern_type])
+                            st.metric("Résolution", "512x512 px")
+                        with col_info2:
+                            st.metric("Couleurs", "RGB 24-bit")
+                            st.metric("Taille", f"{len(st.session_state.test_image_data) / 1024:.1f} KB")
+                
+                else:
+                    # Afficher l'image uploadée normale
+                    image = Image.open(st.session_state.uploaded_file)
+                    st.markdown("### 📸 Image Originale")
+                    st.image(image, use_column_width=True)
+                    
+                    # Informations sur l'image uploadée
+                    with st.expander("📋 Informations sur l'image"):
+                        img_array = np.array(image)
+                        col_info1, col_info2 = st.columns(2)
+                        with col_info1:
+                            st.metric("Dimensions", f"{img_array.shape[1]}x{img_array.shape[0]}")
+                            st.metric("Taille fichier", f"{len(st.session_state.uploaded_file.getvalue()) / 1024:.1f} KB")
+                        with col_info2:
+                            colors = "Niveaux de gris" if len(img_array.shape) == 2 else f"RGB ({img_array.shape[2]} canaux)"
+                            st.metric("Couleurs", colors)
+                            st.metric("Format", st.session_state.uploaded_file.type.split('/')[-1].upper())
+            
+            except Exception as e:
+                st.error(f"Erreur lors du chargement de l'image: {str(e)}")
+        
+        else:
+            # Zone d'upload vide
+            st.markdown("""
+            <div class="upload-zone">
+                <div style="font-size: 5rem; color: #00dbde; margin-bottom: 20px;">
+                    <i class="fas fa-cloud-upload-alt"></i>
+                </div>
+                <h3>Glissez-déposez une image ici</h3>
+                <p style="color: #aaa;">ou cliquez pour parcourir vos fichiers</p>
+                <p style="color: #888; font-size: 0.9rem; margin-top: 20px;">
+                    Formats supportés: JPG, PNG, BMP, TIFF
+                </p>
+            </div>
+            """, unsafe_allow_html=True)
+            
+            # Exemples d'images de test
+            st.markdown("### 🎯 Exemples d'Images de Test")
+            col_examples = st.columns(4)
+            example_patterns = ["gradient", "geometric", "color_bars", "test_chart"]
+            example_names = ["🌈 Dégradé", "🔷 Géométrique", "🎨 Couleurs", "📊 Chartre"]
+            
+            for idx, (pattern, name) in enumerate(zip(example_patterns, example_names)):
+                with col_examples[idx]:
+                    # Générer une miniature
+                    example_img = generate_test_image_pattern(pattern)
+                    example_img.thumbnail((100, 100))
+                    st.image(example_img, use_column_width=True)
+                    st.caption(name)
+        
+        st.markdown('</div>', unsafe_allow_html=True)
+    
+    with col_main2:
+        st.markdown('<div class="glass-container">', unsafe_allow_html=True)
+        st.markdown('<h2 class="section-title"><i class="fas fa-magic"></i> TRANSFORMATIONS</h2>', unsafe_allow_html=True)
+        
+        if st.session_state.uploaded_file:
+            # Interface des contrôles
+            col_controls1, col_controls2 = st.columns(2)
+            
+            with col_controls1:
+                st.markdown("#### 🌀 Transformations")
+                st.session_state.effects['rotation'] = st.selectbox(
+                    "Rotation",
+                    ["Aucune", "90° Droite", "90° Gauche", "180°"],
+                    key="rotation_control"
+                )
+                
+                col_effects1, col_effects2 = st.columns(2)
+                with col_effects1:
+                    st.session_state.effects['grayscale'] = st.checkbox("Niveaux de gris", key="grayscale_control")
+                    st.session_state.effects['invert'] = st.checkbox("Inverser", key="invert_control")
+                    st.session_state.effects['hdr'] = st.checkbox("Effet HDR", key="hdr_control")
+                
+                with col_effects2:
+                    st.session_state.effects['edges'] = st.checkbox("Contours", key="edges_control")
+                    st.session_state.effects['sketch'] = st.checkbox("Croquis", key="sketch_control")
+                    st.session_state.effects['blur'] = st.checkbox("Flou", key="blur_control")
+            
+            with col_controls2:
+                st.markdown("#### ⚙️ Réglages")
+                st.session_state.effects['brightness'] = st.slider(
+                    "Luminosité", -100, 100, st.session_state.effects['brightness'],
+                    key="brightness_control"
+                )
+                st.session_state.effects['contrast'] = st.slider(
+                    "Contraste", 0.1, 3.0, st.session_state.effects['contrast'], 0.1,
+                    key="contrast_control"
+                )
+                st.session_state.effects['saturation'] = st.slider(
+                    "Saturation", 0.0, 3.0, st.session_state.effects['saturation'], 0.1,
+                    key="saturation_control"
+                )
+                
+                if st.session_state.effects['blur']:
+                    st.session_state.effects['blur_intensity'] = st.slider(
+                        "Intensité flou", 1, 10, st.session_state.effects['blur_intensity'],
+                        key="blur_intensity_control"
+                    )
+                
+                if st.session_state.effects['edges']:
+                    col_edge1, col_edge2 = st.columns(2)
+                    with col_edge1:
+                        st.session_state.effects['edge_low'] = st.slider(
+                            "Seuil bas", 1, 255, st.session_state.effects['edge_low'],
+                            key="edge_low_control"
+                        )
+                    with col_edge2:
+                        st.session_state.effects['edge_high'] = st.slider(
+                            "Seuil haut", 1, 255, st.session_state.effects['edge_high'],
+                            key="edge_high_control"
+                        )
+            
+            # Bouton de traitement
+            if st.button("🚀 APPLIQUER LES TRANSFORMATIONS", 
+                        use_container_width=True,
+                        type="primary",
+                        key="apply_effects_button"):
+                
+                with st.spinner("⚡ Traitement en cours..."):
+                    # Charger l'image
+                    if st.session_state.test_image_generated:
+                        image = Image.open(io.BytesIO(st.session_state.test_image_data))
+                    else:
+                        image = Image.open(st.session_state.uploaded_file)
+                    
+                    image_np = np.array(image)
+                    
+                    # Appliquer les effets
+                    start_time = time.time()
+                    processed_np = apply_effects(image_np, st.session_state.effects)
+                    processing_time = time.time() - start_time
+                    
+                    # Sauvegarder le résultat
+                    st.session_state.processed_image = processed_np
+                    
+                    # Ajouter à l'historique
+                    st.session_state.history.append({
+                        'timestamp': datetime.now(),
+                        'effects': st.session_state.effects.copy(),
+                        'processing_time': processing_time,
+                        'is_test_image': st.session_state.test_image_generated
+                    })
+                    
+                    st.success(f"✅ Traitement terminé en {processing_time:.2f} secondes!")
+                    st.balloons()
+            
+            # Afficher l'image transformée
+            if st.session_state.processed_image is not None:
+                st.markdown("### ✨ RÉSULTAT")
+                
+                # Badge si c'est une image de test
+                if st.session_state.test_image_generated:
+                    st.markdown('<div class="test-badge">🎲 IMAGE DE TEST</div>', unsafe_allow_html=True)
+                
+                st.image(st.session_state.processed_image, use_column_width=True)
+                
+                # Boutons d'export
+                col_export1, col_export2 = st.columns(2)
+                
+                with col_export1:
+                    # Préparer l'image pour le téléchargement
+                    if len(st.session_state.processed_image.shape) == 2:
+                        processed_pil = Image.fromarray(st.session_state.processed_image, mode='L')
+                    else:
+                        processed_pil = Image.fromarray(st.session_state.processed_image)
+                    
+                    buffer = io.BytesIO()
+                    processed_pil.save(buffer, format="PNG", quality=95, optimize=True)
+                    buffer.seek(0)
+                    
+                    # Nom du fichier
+                    if st.session_state.test_image_generated:
+                        filename = f"master_pro_test_processed_{datetime.now().strftime('%Y%m%d_%H%M%S')}.png"
+                    else:
+                        original_name = st.session_state.uploaded_file.name
+                        name_without_ext = original_name.rsplit('.', 1)[0]
+                        filename = f"{name_without_ext}_processed_{datetime.now().strftime('%H%M%S')}.png"
+                    
+                    st.download_button(
+                        label="📥 TÉLÉCHARGER L'IMAGE",
+                        data=buffer,
+                        file_name=filename,
+                        mime="image/png",
+                        use_container_width=True,
+                        key="download_button"
+                    )
+                
+                with col_export2:
+                    if st.button("🔄 TRAITER UNE NOUVELLE IMAGE",
+                               use_container_width=True,
+                               type="secondary",
+                               key="new_image_button"):
+                        # Réinitialiser pour une nouvelle image
+                        st.session_state.processed_image = None
+                        st.session_state.effects = {
+                            'rotation': "Aucune",
+                            'grayscale': False,
+                            'blur': False,
+                            'blur_intensity': 3,
+                            'edges': False,
+                            'edge_low': 100,
+                            'edge_high': 200,
+                            'invert': False,
+                            'hdr': False,
+                            'sketch': False,
+                            'brightness': 0,
+                            'contrast': 1.0,
+                            'saturation': 1.0
+                        }
+                        st.rerun()
+                
+                # Aperçu des paramètres utilisés
+                with st.expander("⚙️ Paramètres appliqués"):
+                    active_effects = [k for k, v in st.session_state.effects.items() 
+                                    if v and k not in ['blur_intensity', 'edge_low', 'edge_high']]
+                    
+                    if active_effects:
+                        st.write("**Effets actifs:**")
+                        for effect in active_effects:
+                            st.write(f"• {effect.replace('_', ' ').title()}")
+                    else:
+                        st.info("Aucun effet appliqué")
+        
+        else:
+            # Message d'attente
+            st.info("""
+            ## 📝 Prêt à transformer !
+            
+            1. **Importez une image** depuis votre ordinateur
+            2. **Ou générez une image de test** avec le bouton 🎲
+            3. **Ajustez les paramètres** de transformation
+            4. **Appliquez les effets** et téléchargez le résultat
+            
+            ### 🎯 Effets disponibles:
+            - 🌀 **Rotation:** 90°, 180°, 270°
+            - 🎨 **Filtres:** Niveaux de gris, Inversion, HDR, Croquis
+            - 🔍 **Détection:** Contours avec réglages précis
+            - ⚙️ **Réglages:** Luminosité, Contraste, Saturation
+            - 🌫️ **Effets:** Flou gaussien paramétrable
+            """)
+        
+        st.markdown('</div>', unsafe_allow_html=True)
+
+with tab2:
+    st.markdown('<div class="glass-container">', unsafe_allow_html=True)
+    st.markdown('<h2 class="section-title"><i class="fas fa-chart-line"></i> ANALYTICS & HISTORIQUE</h2>', unsafe_allow_html=True)
+    
+    if st.session_state.history:
+        # Statistiques récentes
+        latest = st.session_state.history[-1]
+        
+        col_stats1, col_stats2, col_stats3, col_stats4 = st.columns(4)
+        
+        with col_stats1:
+            st.metric("⏱️ Dernier traitement", f"{latest['processing_time']:.2f}s")
+        with col_stats2:
+            active_effects = sum(1 for k, v in latest['effects'].items() 
+                               if v and k not in ['blur_intensity', 'edge_low', 'edge_high'])
+            st.metric("🎯 Effets appliqués", active_effects)
+        with col_stats3:
+            image_type = "Image de test" if latest.get('is_test_image', False) else "Image uploadée"
+            st.metric("📁 Type", image_type)
+        with col_stats4:
+            total_treatments = len(st.session_state.history)
+            st.metric("📊 Total traitements", total_treatments)
+        
+        # Graphique d'historique
+        if len(st.session_state.history) > 1:
+            st.markdown("### 📈 Évolution des temps de traitement")
+            
+            times = [h['timestamp'].strftime('%H:%M:%S') for h in st.session_state.history]
+            durations = [h['processing_time'] for h in st.session_state.history]
+            
+            fig = go.Figure(data=go.Scatter(
+                x=times,
+                y=durations,
+                mode='lines+markers',
+                line=dict(color='#00dbde', width=3),
+                marker=dict(size=10, color='#fc00ff'),
+                fill='tozeroy',
+                fillcolor='rgba(0, 219, 222, 0.1)'
+            ))
+            
+            fig.update_layout(
+                template="plotly_dark",
+                plot_bgcolor='rgba(0,0,0,0)',
+                paper_bgcolor='rgba(0,0,0,0)',
+                font_color='#f0f0f0',
+                hovermode='x unified'
+            )
+            
+            st.plotly_chart(fig, use_container_width=True)
+        
+        # Détails des traitements récents
+        st.markdown("### 📋 Historique détaillé")
+        
+        for i, entry in enumerate(reversed(st.session_state.history[-5:])):
+            with st.expander(f"Traitement #{len(st.session_state.history)-i} - {entry['timestamp'].strftime('%H:%M:%S')}"):
+                col1, col2 = st.columns([2, 1])
+                
+                with col1:
+                    st.write(f"**Durée:** {entry['processing_time']:.2f}s")
+                    st.write(f"**Type:** {'Image de test 🎲' if entry.get('is_test_image', False) else 'Image uploadée 📁'}")
+                    
+                    active_in_entry = [k for k, v in entry['effects'].items() 
+                                     if v and k not in ['blur_intensity', 'edge_low', 'edge_high']]
+                    if active_in_entry:
+                        st.write("**Effets appliqués:**")
+                        for eff in active_in_entry:
+                            st.write(f"• {eff.replace('_', ' ').title()}")
+                
+                with col2:
+                    if st.button(f"🔄 Restaurer", key=f"restore_{i}"):
+                        st.session_state.effects = entry['effects']
+                        st.success("Configuration restaurée !")
+                        st.rerun()
+        
+        # Bouton de nettoyage
+        if st.button("🗑️ Effacer l'historique", use_container_width=True, type="secondary"):
+            st.session_state.history = []
+            st.success("Historique effacé !")
+            st.rerun()
+    
+    else:
+        st.info("""
+        ## 📊 Analytics en attente
+        
+        Aucun traitement n'a encore été effectué.
+        
+        ### Pour commencer:
+        1. Importez ou générez une image
+        2. Appliquez des transformations
+        3. Les statistiques apparaîtront ici automatiquement
+        
+        ### 📈 Vous pourrez voir:
+        - Temps de traitement
+        - Nombre d'effets appliqués
+        - Évolution des performances
+        - Historique complet des modifications
+        """)
+    
+    st.markdown('</div>', unsafe_allow_html=True)
+
+with tab3:
+    st.markdown('<div class="glass-container">', unsafe_allow_html=True)
+    st.markdown('<h2 class="section-title"><i class="fas fa-gamepad"></i> GUIDE & PRÉRÉGLAGES</h2>', unsafe_allow_html=True)
+    
+    col_guide1, col_guide2 = st.columns([2, 1])
+    
+    with col_guide1:
+        st.markdown("""
+        ### 🎮 GUIDE D'UTILISATION
+        
+        #### Étape 1: Chargement d'image
+        - **Importation:** Cliquez sur "Parcourir" ou glissez-déposez
+        - **Génération:** Utilisez 🎲 pour créer une image de test
+        - **Formats:** JPG, PNG, BMP, TIFF supportés
+        
+        #### Étape 2: Transformation
+        - **Filtres rapides:** Cochez les effets souhaités
+        - **Réglages précis:** Utilisez les sliders pour ajuster
+        - **Prévisualisation:** Les changements s'appliquent en temps réel
+        
+        #### Étape 3: Export
+        - **Téléchargement:** PNG haute qualité
+        - **Rapport:** Analytics détaillés disponibles
+        - **Historique:** Suivi de tous vos traitements
+        
+        ### 💡 ASTUCES PRO
+        
+        #### Combinaisons gagnantes:
+        - **Portrait pro:** HDR + Légère saturation
+        - **Artistique:** Croquis + Inversion
+        - **Abstrait:** Contours + Flou + Rotation
+        - **Minimaliste:** Niveaux de gris + Contraste élevé
+        
+        #### Performances:
+        - Les images < 5MB traitent plus vite
+        - Sauvegardez vos réglages préférés
+        - Utilisez l'historique pour retrouver vos réglages
+        """)
+    
+    with col_guide2:
+        st.markdown("### ⚡ PRÉRÉGLAGES RAPIDES")
+        
+        # Préréglages
+        presets = {
+            "🎨 Artistique": {
+                'sketch': True,
+                'contrast': 1.5,
+                'saturation': 0.8,
+                'brightness': 10
+            },
+            "📷 Professionnel": {
+                'hdr': True,
+                'contrast': 1.2,
+                'saturation': 1.1,
+                'brightness': 5
+            },
+            "⚫ Noir & Blanc Pro": {
+                'grayscale': True,
+                'contrast': 1.8,
+                'brightness': 15
+            },
+            "🌀 Effet Cinéma": {
+                'contrast': 1.3,
+                'saturation': 0.7,
+                'brightness': -10,
+                'blur': True,
+                'blur_intensity': 2
+            },
+            "🔍 Haute Définition": {
+                'edges': True,
+                'edge_low': 50,
+                'edge_high': 150,
+                'contrast': 1.4
+            },
+            "🌈 Psychedélique": {
+                'invert': True,
+                'saturation': 2.0,
+                'contrast': 1.6,
+                'blur': True,
+                'blur_intensity': 4
+            }
+        }
+        
+        for preset_name, preset_config in presets.items():
+            if st.button(preset_name, use_container_width=True, key=f"preset_{preset_name}"):
+                # Appliquer le préréglage
+                for key, value in preset_config.items():
+                    if key in st.session_state.effects:
+                        st.session_state.effects[key] = value
+                
+                st.success(f"Préréglage '{preset_name}' appliqué !")
+                
+                # Si une image est chargée, appliquer directement
+                if st.session_state.uploaded_file:
+                    st.info("Cliquez sur 'APPLIQUER LES TRANSFORMATIONS' pour voir le résultat")
+    
+    # Section démo
+    st.markdown("### 🎪 DÉMONSTRATION EN DIRECT")
+    
+    demo_col1, demo_col2 = st.columns([2, 1])
+    
+    with demo_col1:
+        demo_mode = st.selectbox(
+            "Mode de démonstration",
+            ["Simple", "Avancé", "Artiste", "Technique"],
+            key="demo_mode"
+        )
+    
+    with demo_col2:
+        if st.button("🎬 LANCER LA DÉMO", use_container_width=True):
+            # Animation de progression
+            progress_bar = st.progress(0)
+            status_text = st.empty()
+            
+            for i in range(100):
+                progress_bar.progress(i + 1)
+                if i < 25:
+                    status_text.text("📥 Chargement de l'image...")
+                elif i < 50:
+                    status_text.text("⚙️ Application des effets...")
+                elif i < 75:
+                    status_text.text("🎨 Optimisation des couleurs...")
+                else:
+                    status_text.text("✅ Finalisation...")
+                time.sleep(0.02)
+            
+            progress_bar.empty()
+            status_text.empty()
+            
+            # Effets visuels
+            st.balloons()
+            st.success("🎉 Démonstration terminée avec succès !")
+            
+            # Montrer un exemple
+            if demo_mode == "Artiste":
+                st.info("🎨 Mode Artiste: Combinaison parfaite pour des effets créatifs")
+            elif demo_mode == "Technique":
+                st.info("🔧 Mode Technique: Optimisé pour la précision et les détails")
+    
+    st.markdown('</div>', unsafe_allow_html=True)
+
+# -----------------------------
+# FOOTER AVANCÉ
+# -----------------------------
+st.markdown("""
+<hr>
+<div style="text-align: center; padding: 30px; color: #a0a0ff; font-size: 0.9rem;">
+    <div style="display: flex; justify-content: center; gap: 30px; margin-bottom: 15px; flex-wrap: wrap;">
+        <div><i class="fas fa-bolt"></i> Traitement Temps Réel</div>
+        <div><i class="fas fa-shield-alt"></i> Sécurisé & Privé</div>
+        <div><i class="fas fa-infinity"></i> Illimité</div>
+        <div><i class="fas fa-rocket"></i> Haute Performance</div>
     </div>
-    <p style="color: var(--text-secondary); font-size: 0.8rem; margin-top: 1rem;">
-    © 2025 Projet1 Pro •
+    <p style="margin-top: 20px;">
+        <strong>MASTER PRO AI STUDIO</strong> © 2024 | 
+        <span style="color: #00dbde;">Version 3.1.0</span>
+    </p>
+    <p>
+        Développé par l'équipe <span style="color: #00dbde;">FEZE Loïck - EFEMBA Manuella - EYOUM Brayan </span>
+    </p>
+    <p style="font-size: 0.8rem; color: #888; margin-top: 10px;">
+        <i class="fas fa-cogs"></i> Powered by OpenCV 
     </p>
 </div>
 """, unsafe_allow_html=True)
 
+# Effet de notification initiale
+if 'first_visit' not in st.session_state:
+    st.session_state.first_visit = True
 
-
-
-
+if st.session_state.first_visit:
+    st.markdown("""
+    <div style="position: fixed; top: 20px; right: 20px; background: rgba(25, 25, 40, 0.95); 
+                border-left: 5px solid #00dbde; padding: 20px; border-radius: 10px; 
+                box-shadow: 0 5px 20px rgba(0,0,0,0.3); z-index: 1000; max-width: 300px;
+                animation: slideIn 0.5s ease-out;">
+        <h4 style="color: #00dbde; margin-bottom: 10px;">
+            <i class="fas fa-rocket"></i> Bienvenue dans MASTER PRO!
+        </h4>
+        <p style="margin: 0; color: #f0f0f0;">
+            Commencez par générer une image de test 🎲 ou importez la vôtre!
+        </p>
+    </div>
+    
+    <script>
+        setTimeout(() => {
+            let toast = document.querySelector('[style*="slideIn"]');
+            if (toast) {
+                toast.style.opacity = '0';
+                toast.style.transform = 'translateX(100px)';
+                setTimeout(() => {
+                    toast.style.display = 'none';
+                }, 500);
+            }
+        }, 5000);
+    </script>
+    """, unsafe_allow_html=True)
+    st.session_state.first_visit = False
