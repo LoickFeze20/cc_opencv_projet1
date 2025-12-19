@@ -1143,7 +1143,7 @@ else:
     """, unsafe_allow_html=True)
     
     # Features avec design premium
-    col_f1, col_f2, col_f3 = st.columns(3)
+    col_f1, col_f2 = st.columns(2)
     
     with col_f1:
         st.markdown('<div class="feature-card">', unsafe_allow_html=True)
@@ -1158,18 +1158,6 @@ else:
         st.markdown('</div>', unsafe_allow_html=True)
     
     with col_f2:
-        st.markdown('<div class="feature-card">', unsafe_allow_html=True)
-        st.markdown("### 💎 DESIGN CANVA/PRO")
-        st.markdown("""
-        • Interface premium
-        • Thème auto-adaptatif
-        • Animations fluides
-        • Design responsive
-        • UX optimisée
-        """)
-        st.markdown('</div>', unsafe_allow_html=True)
-    
-    with col_f3:
         st.markdown('<div class="feature-card">', unsafe_allow_html=True)
         st.markdown("### 📄 RAPPORTS COMPLETS")
         st.markdown("""
@@ -1198,6 +1186,7 @@ else:
 st.markdown("""
 <div class="footer">
     <h3>🎓 PROJET 1 INTELLIGENCE ARTIFICIELLE & BIG DATA</h3>
+    <h4>Developpé par Effemba, Eyoum et Feze</h4>
     <p>Projet1 OpenCV & Streamlit - Studio de Traitement d'Images Intelligent</p>
     <div style="margin: 1.5rem 0; display: flex; justify-content: center; gap: 15px; flex-wrap: wrap;">
         <span style="padding: 8px 16px; background: var(--card-bg); 
@@ -1218,10 +1207,11 @@ st.markdown("""
         </span>
     </div>
     <p style="color: var(--text-secondary); font-size: 0.8rem; margin-top: 1rem;">
-    © 2025 Projet1 Pro • Dernière mise à jour: """ + datetime.now().strftime("%d/%m/%Y %H:%M") + """
+    © 2025 Projet1 Pro •
     </p>
 </div>
 """, unsafe_allow_html=True)
+
 
 
 
