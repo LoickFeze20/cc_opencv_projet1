@@ -1190,8 +1190,6 @@ else:
     2. **Ajustez** les paramètres dans les onglets
     3. **Visualisez** les résultats avec détails complets
     4. **Exportez** avec rapports professionnels
-    
-    *L'interface s'adapte automatiquement au thème de votre système*
     """)
 
 # -----------------------------
@@ -1224,5 +1222,6 @@ st.markdown("""
     </p>
 </div>
 """, unsafe_allow_html=True)
+
 
 
